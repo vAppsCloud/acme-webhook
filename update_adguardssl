@@ -1,0 +1,32 @@
+#!/bin/sh
+
+# Define the directories
+certs_dir="/var/etc/acme-client/certs"
+keys_dir="/var/etc/acme-client/keys"
+adguard_dir="/usr/local/AdGuardHome/certs"
+
+# Find the latest fullchain.pem and private.key based on modification time
+latest_fullchain=$(find "$certs_dir" -name "fullchain.pem" -type f -exec stat -f "%m %N" {} \; | sort -n | tail -n 1 | cut -d ' ' -f2-)
+latest_privatekey=$(find "$keys_dir" -name "private.key" -type f -exec stat -f "%m %N" {} \; | sort -n | tail -n 1 | cut -d ' ' -f2-)
+
+# Check if files were found
+if [ -z "$latest_fullchain" ] || [ -z "$latest_privatekey" ]; then
+  echo "Error: Could not find required files."
+  exit 1
+fi
+
+# Create symlink for fullchain.pem in AdGuard Home directory
+if [ -L "$adguard_dir/fullchain.pem" ]; then
+  echo "Removing existing symlink for fullchain.pem."
+  rm -f "$adguard_dir/fullchain.pem"
+fi
+ln -s "$latest_fullchain" "$adguard_dir/fullchain.pem"
+echo "Created symlink for fullchain.pem: $latest_fullchain -> $adguard_dir/fullchain.pem"
+
+# Create symlink for private.key in AdGuard Home directory
+if [ -L "$adguard_dir/private.key" ]; then
+  echo "Removing existing symlink for private.key."
+  rm -f "$adguard_dir/private.key"
+fi
+ln -s "$latest_privatekey" "$adguard_dir/private.key"
+echo "Created symlink for private.key: $latest_privatekey -> $adguard_dir/private.key"
